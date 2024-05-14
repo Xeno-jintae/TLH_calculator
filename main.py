@@ -3,7 +3,7 @@ import streamlit as st
 
 exchange_rate = 1350
 
-df_test = pd.read_csv('/Users/xeno/Desktop/work_code/절세서비스/TLH/data/test.csv')
+df_test = pd.read_csv('./data/test.csv')
 
 df_test['1주당_손실액'] = df_test['1주당_매도가격'] - df_test['1주당_취득가액']
 df_test['1주당_손실액_환율'] = df_test['1주당_손실액'] * exchange_rate
