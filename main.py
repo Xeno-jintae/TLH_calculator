@@ -60,7 +60,7 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
         dict['매도주수'].append(df_loss['보유수량'].values[0])
         dict['매도금액'].append(loss_money)
         print(result_money)
-        # 2번째기준에 부합하는 종목 선정
+        # 2번째 기준에 부합하는 종목 선정
         tax_loss_harvesting(df_remain, result_money, dict, accounting_number, 0)
     else: # 결과가 음수라면 주수를 줄여가며 금액 확인
         df_loss_quantity = df_loss['보유수량'].values[0]
@@ -68,6 +68,8 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
             df_loss_quantity = df_loss_quantity - 1
             if (df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity) + money + buffer >= 0:
                 if df_loss_quantity == 0 : # 주수가 0주라면 break
+                    df_remain = df.drop(df_loss.index).reset_index(drop=True)
+                    tax_loss_harvesting(df_remain, money, dict, accounting_number, buffer)
                     break
                 print(f"{df_loss['종목코드'].values[0]}를 {df_loss_quantity}주 만큼 파세요")
                 print(f"손실 금액 : {df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity}")
