@@ -4,7 +4,7 @@ import streamlit as st
 exchange_rate = 1350
 
 
-df = pd.read_excel("/Users/xeno/Desktop/work_code/절세서비스/TLH/data/real_account_test.xlsx") # 데이터 로드
+df = pd.read_excel("./data/real_account_test.xlsx") # 데이터 로드
 df['1주당_취득가액'] = round(df['매입원가'] / df['보유수량'])
 df['1주당_매도가격'] = round(df['평가금액'] / df['보유수량'])
 df['1주당_손실액_환율'] = df['1주당_매도가격'] - df['1주당_취득가액']
