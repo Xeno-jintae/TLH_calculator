@@ -66,12 +66,12 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
         if result_money >= 0: # 결과가 양수라면 매도하면 됨
             print(f"{df_loss['종목코드'].values[0]}를 {df_loss['보유수량'].values[0]}주 만큼 파세요")
             print(f"손실 금액 : {loss_money}")
+            print(f"남은 과세표준 : {result_money}")
             df_remain = df.drop(df_loss.index).reset_index(drop=True)
 
             dict['종목코드'].append(df_loss['종목코드'].values[0])
             dict['매도주수'].append(df_loss['보유수량'].values[0])
             dict['매도금액'].append(loss_money)
-            print(result_money)
             # 2번째 기준에 부합하는 종목 선정
             tax_loss_harvesting(df_remain, result_money, dict, accounting_number, 0)
         else: # 결과가 음수라면 주수를 줄여가며 금액 확인
@@ -79,16 +79,21 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
             while (df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity) + money + buffer < 0:
                 df_loss_quantity = df_loss_quantity - 1
                 if (df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity) + money + buffer >= 0:
-                    if df_loss_quantity == 0 : # 주수가 0주라면 break
+                    if df_loss_quantity == 0 : # 주수가 0주라면 넣을 종목이 없는 것이므로 다음 기준에 해당하는 종목 선정 뒤 break
                         df_remain = df.drop(df_loss.index).reset_index(drop=True)
                         tax_loss_harvesting(df_remain, money, dict, accounting_number, buffer)
                         break
                     print(f"{df_loss['종목코드'].values[0]}를 {df_loss_quantity}주 만큼 파세요")
                     print(f"손실 금액 : {df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity}")
+                    print(f"남은 과세표준 : {df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity + money + buffer}")
 
                     dict['종목코드'].append(df_loss['종목코드'].values[0])
                     dict['매도주수'].append(df_loss_quantity)
                     dict['매도금액'].append(df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity)
+                    if df_loss_quantity < df_loss['보유수량'].values[0]: # 더 손실 시켜야하는 금액이 남은 상태에서 다음 종목으로 그 손실을 시킬 수 있는 경우
+                        df_remain = df.drop(df_loss.index).reset_index(drop=True)
+                        tax_loss_harvesting(df_remain, df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity + money + buffer, dict, accounting_number, buffer=0)
+                        break
                     break
                 elif len(dict['종목코드']) == 3: # 종목수 3종목으로 제한
                     break
@@ -107,12 +112,13 @@ if __name__ == "__main__" :
     money = st.text_input("손실 시켜야하는 금액을 입력하세요.", value = 1500000)
     exchange_rate_buffer = st.text_input("환율을 고려한 버퍼 금액을 입력하세요(음수).", value = -60000)
     st.write(f"과세표준 : {format(int(money), ',')}원")
-    st.write(f"버퍼금액 : {format(int(exchange_rate_buffer), ',')}원")
+    st.write(f":green[버퍼금액 : {format(int(exchange_rate_buffer), ',')}원]")
     st.write(f"버퍼금액 적용 후 과세표준 : {format(int(money) + int(exchange_rate_buffer), ',')}원")
-    st.write(f"절세 전 해외주식 양도세 : {format(round(int(money) * 0.22), ',')}원")
+    st.write(f":red[절세 전 해외주식 양도세 : {format(round(int(money) * 0.22), ',')}원]")
     TLH_result = tax_loss_harvesting(df, int(money), dict=dic, accounting_number=accounting_select_box, buffer=int(exchange_rate_buffer))
     # st.write(f"손실 금액 더한 후 과세표준: {format(money + TLH_result['매도금액'].sum(), ',')}원")
-    st.write(f"절세 후 해외주식 양도세 : {format(round((int(money) + TLH_result['매도금액'].sum()) * 0.22), ',')}원")
+    st.write(f"절세 후 과세표준 : {format(int(money) + int(TLH_result['매도금액'].sum()), ',')}원")
+    st.write(f":red[절세 후 해외주식 양도세 : {format(round((int(money) + TLH_result['매도금액'].sum()) * 0.22), ',')}원]")
 
     col1, col2 = st.columns(2)
 
