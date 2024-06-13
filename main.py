@@ -67,13 +67,13 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
         result_money = money * (1-buffer) + conclude_loss_money + loss_money # 과세표준 * 버퍼 (%) + 기체결로 인한 손실액 + 위의 선정된 종목의 매도 손실액
 
         if result_money >= 0: # 결과가 양수라면 총 보유수량 그대로 넣으면 됨
-            print(f"{df_loss['종목코드'].values[0]}를 {df_loss['보유수량'].values[0]}주 만큼 파세요")
+            print(f"{df_loss['종목코드'].values[0]}를 {df_loss['총보유수량'].values[0]}주 만큼 파세요")
             print(f"손실 금액 : {loss_money}")
             print(f"남은 과세표준 : {result_money}")
             df_remain = df.drop(df_loss.index).reset_index(drop=True) # 추천 종료된 종목은 제외
 
             dict['종목코드'].append(df_loss['종목코드'].values[0])
-            dict['매도주수'].append(df_loss['보유수량'].values[0])
+            dict['매도주수'].append(df_loss['총보유수량'].values[0])
             dict['손실금액'].append(loss_money)
 
             if len(dict['종목코드']) == 3 : # 3종목으로 채워졌을 경우 추천 종료
@@ -83,7 +83,7 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
             tax_loss_harvesting(df_remain, result_money, dict, accounting_number, buffer = 0)
 
         else: # 결과가 음수라면 총보유수량을 하나씩 줄여가며 금액 확인 계산
-            df_loss_quantity = df_loss['보유수량'].values[0]
+            df_loss_quantity = df_loss['총보유수량'].values[0]
             while (df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity) + money * (1-buffer) + conclude_loss_money< 0:
                 df_loss_quantity = df_loss_quantity - 1
                 if (df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity) + money * (1-buffer) + conclude_loss_money >= 0:
@@ -100,7 +100,7 @@ def tax_loss_harvesting(df, money, dict, accounting_number, buffer):
                     dict['매도주수'].append(df_loss_quantity)
                     dict['손실금액'].append(df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity)
 
-                    if df_loss_quantity < df_loss['보유수량'].values[0]: # 더 손실 시켜야하는 금액이 남은 상태에서 다음 종목으로 그 손실을 시킬 수 있는 경우
+                    if df_loss_quantity < df_loss['총보유수량'].values[0]: # 더 손실 시켜야하는 금액이 남은 상태에서 다음 종목으로 그 손실을 시킬 수 있는 경우
                         df_remain = df.drop(df_loss.index).reset_index(drop=True)
                         tax_loss_harvesting(df_remain, df_loss['1주당_손실액_환율'].values[0] * df_loss_quantity + money * (1-buffer), dict, accounting_number, buffer=0)
                         break
@@ -125,7 +125,6 @@ if __name__ == "__main__" :
 
     accounting_select_box = st.selectbox("계좌번호", (list(df['계좌번호'].unique())))
     money = st.text_input("손실 시켜야하는 금액을 입력하세요.", value = 1500000)
-    # exchange_rate_buffer = st.text_input("환율을 고려한 버퍼 금액을 입력하세요(음수).", value = -60000)
     exchange_rate_buffer = st.slider("환율을 고려한 버퍼(%)를 선택하세요.", 0.0, 1.0, 0.1)
     scs = show_concluded_stock(df, accounting_select_box)
     TLH_result = tax_loss_harvesting(df, int(money), dict=dic, accounting_number=accounting_select_box,
@@ -141,8 +140,10 @@ if __name__ == "__main__" :
         container.write("--------------------------------")
         container.write("<양도소득세>")
         container.write(f":red[절세 전 해외주식 양도소득세 : {format(round(int(money) * 0.22), ',')}원]")
-        container.write(f"줄일 수 있는 양도소득세 : {format(round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum())*0.22)), ',')}원")
-        container.write(f"절세 후 양도소득세 : {format(round(int(money) * 0.22) + round(int((scs['체결손실액'].sum() + TLH_result['손실금액'].sum())*0.22)), ',')}원")
+        money2 = round(int(money) * 0.22) if int(money) < round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()))) else round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()) * 0.22))
+        print(round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()) * 0.22)) )
+        container.write(f"줄일 수 있는 양도소득세 : {format(money2, ',')}원")
+        container.write(f"절세 후 양도소득세 : {format(round(int(money) * 0.22) - money2, ',')}원")
 
 
 
@@ -150,9 +151,9 @@ if __name__ == "__main__" :
         st.write(f"과세표준 : {format(int(money), ',')}원")
         st.write(f":green[버퍼(%) : {exchange_rate_buffer}]")
         st.write(f"버퍼(%) 적용 후 과세표준 : {format(int(float(money)*(1-exchange_rate_buffer)), ',')}원")
-        st.write(f":red[절세 전 해외주식 양도세 : {format(round(int(money) * 0.22), ',')}원]")
-        st.write(f"절세 후 과세표준 : {format(int(money) + int(TLH_result['손실금액'].sum()), ',')}원")
-        st.write(f":red[절세 후 해외주식 양도세 : {format(round((int(money) + TLH_result['손실금액'].sum()) * 0.22), ',')}원]")
+        # st.write(f":red[절세 전 해외주식 양도세 : {format(round(int(money) * 0.22), ',')}원]")
+        # st.write(f"절세 후 과세표준 : {format(int(money) + int(TLH_result['손실금액'].sum()), ',')}원")
+        # st.write(f":red[절세 후 해외주식 양도세 : {format(round((int(money) + TLH_result['손실금액'].sum()) * 0.22), ',')}원]")
 
     col1, col2 = st.columns(2)
 
