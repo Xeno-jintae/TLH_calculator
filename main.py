@@ -141,7 +141,6 @@ if __name__ == "__main__" :
         container.write("<양도소득세>")
         container.write(f":red[절세 전 해외주식 양도소득세 : {format(round(int(money) * 0.22), ',')}원]")
         money2 = round(int(money) * 0.22) if int(money) < round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()))) else round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()) * 0.22))
-        print(round(int(-(scs['체결손실액'].sum() + TLH_result['손실금액'].sum()) * 0.22)) )
         container.write(f"줄일 수 있는 양도소득세 : {format(money2, ',')}원")
         container.write(f"절세 후 양도소득세 : {format(round(int(money) * 0.22) - money2, ',')}원")
 
