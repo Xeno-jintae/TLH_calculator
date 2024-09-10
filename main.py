@@ -7,7 +7,7 @@ import json
 import xlrd
 
 #실제 dev 계좌 테스트
-df = pd.read_csv("./data/dev_20240906.csv") # 데이터 로드
+# df = pd.read_csv("./data/dev_20240906.csv") # 데이터 로드
 
 df = pd.read_excel("./data/dev_20240909.xlsx", engine="openpyxl", usecols="A:O")
 df['1주당_취득가액'] = df['매입단가(원화)']
